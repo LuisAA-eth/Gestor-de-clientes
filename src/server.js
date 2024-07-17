@@ -118,7 +118,7 @@ app.get('/api/protected', verifyToken, (req, res) => {
 
 app.get('/api/clientes/activos', verifyToken, (req, res) => {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
     const countQuery = 'SELECT COUNT(*) AS total FROM clientes WHERE estadoSuscripcion = "Activa"';

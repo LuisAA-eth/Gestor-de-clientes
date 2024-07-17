@@ -6,15 +6,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     let currentPage = 1;
-    const limit = 20;
+    const limit = 10;
     
-    fetchClientesActivos(currentPage, limit);
+    
 
     // Función para obtener clientes activos desde el servidor
     function fetchClientesActivos(page, limit) {
         const token = localStorage.getItem('token'); // Obtener el token almacenado en localStorage
 
-        fetch('http://localhost:3000/api/clientes/activos?page=${page}&limit=${limit}', {
+        fetch(`http://localhost:3000/api/clientes/activos?page=${page}&limit=${limit}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`, // Añadir el token en la cabecera Authorization
@@ -22,18 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .then(handleTokenExpiry)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-                return response.json();
-            
-            
-        })
+        .then(response => response.json()) 
         .then(data => {
             if (data && data.data && data.data.length > 0) {
                 populateTable(data.data);
-                updatePagination(data.page, data.totalPages);
+                updatePagination(data.currentPage, data.totalPages);
                 console.log(data);
             } else {
                 console.log('No hay datos disponibles para mostrar.');
@@ -67,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
             let checkSubCell = row.insertCell(7); 
             let checkSubButton = document.createElement('button');
             checkSubButton.textContent = 'Verificar Suscripción';
-            //checkSubButton.className = 'check-sub-button';
+            checkSubButton.className = 'check-sub-button';
             checkSubButton.onclick = function() { verificarEstadoSuscripcion(cliente.Email); };
             checkSubCell.appendChild(checkSubButton);
 
@@ -75,13 +68,13 @@ document.addEventListener('DOMContentLoaded', function() {
             let renewCell2 = row.insertCell(8);
             let renewButtonYear = document.createElement('button');
             renewButtonYear.textContent = 'Renovar 1 Año';
-           // renewButtonYear.className = 'renew-button';
+            renewButtonYear.className = 'renew-button';
             renewButtonYear.onclick = function() { renovarSuscripcion(cliente.Email, 'anio'); };
             renewCell2.appendChild(renewButtonYear);
 
             let renewButtonMonth = document.createElement('button');
             renewButtonMonth.textContent = 'Renovar 1 Mes';
-           // renewButtonMonth.className = 'renew-button';
+            renewButtonMonth.className = 'renew-button';
             renewButtonMonth.onclick = function() { renovarSuscripcion(cliente.Email, 'mes'); };
             renewCell2.appendChild(renewButtonMonth);
 
@@ -124,16 +117,27 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         pagination.appendChild(prevButton);
 
+        for (let page = 1; page <= totalPages; page++) {
+            const pageButton = document.createElement('button');
+            pageButton.textContent = page;
+            if (page === currentPage) {
+                pageButton.disabled = true;
+            }
+            pageButton.onclick = () => fetchClientesActivos(page, limit);
+            pagination.appendChild(pageButton);
+        }
+        
         const nextButton = document.createElement('button');
         nextButton.textContent = 'Siguiente';
+        nextButton.disabled = currentPage === totalPages;
         nextButton.onclick = () => {
-            currentPage++;
-            fetchClientesActivos(currentPage, limit);
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchClientesActivos(currentPage, limit);
+            }
         };
         pagination.appendChild(nextButton);
     }
-    
-
 
     
     // Funciones para manejar las acciones específicas
@@ -228,9 +232,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Si el estado no es 401, simplemente retorna la respuesta para continuar con el procesamiento habitual
         return response;
     }
+
+    fetchClientesActivos(currentPage, limit);
     
 
-    function refreshToken() {
+   /* function refreshToken() {
         const expiredToken = localStorage.getItem('token');
         return fetch('http://localhost:3000/api/token/refresh', {
             method: 'POST',
@@ -247,8 +253,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.message);
             }
         });
-    }
+    }*/
     
-
-
 });
