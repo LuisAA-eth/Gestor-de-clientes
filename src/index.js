@@ -1,11 +1,20 @@
 document.addEventListener('DOMContentLoaded', function() {
-    fetchClientesActivos();
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+    }
+
+    let currentPage = 1;
+    const limit = 20;
+    
+    fetchClientesActivos(currentPage, limit);
 
     // Función para obtener clientes activos desde el servidor
-    function fetchClientesActivos() {
+    function fetchClientesActivos(page, limit) {
         const token = localStorage.getItem('token'); // Obtener el token almacenado en localStorage
 
-        fetch('http://localhost:3000/api/clientes/activos', {
+        fetch('http://localhost:3000/api/clientes/activos?page=${page}&limit=${limit}', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`, // Añadir el token en la cabecera Authorization
@@ -22,8 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
         })
         .then(data => {
-            if (data && data.length > 0) {
-                populateTable(data);
+            if (data && data.data && data.data.length > 0) {
+                populateTable(data.data);
+                updatePagination(data.page, data.totalPages);
                 console.log(data);
             } else {
                 console.log('No hay datos disponibles para mostrar.');
@@ -32,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error al cargar los clientes activos:', error);
             const tableBody = document.getElementById('clientes-activos-table').getElementsByTagName('tbody')[0];
-            tableBody.innerHTML = '<tr><td colspan="7">No se pudo cargar la información de los clientes.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="10">No se pudo cargar la información de los clientes.</td></tr>';
         });
 
         
@@ -57,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
             let checkSubCell = row.insertCell(7); 
             let checkSubButton = document.createElement('button');
             checkSubButton.textContent = 'Verificar Suscripción';
-            checkSubButton.className = 'check-sub-button';
+            //checkSubButton.className = 'check-sub-button';
             checkSubButton.onclick = function() { verificarEstadoSuscripcion(cliente.Email); };
             checkSubCell.appendChild(checkSubButton);
 
@@ -65,13 +75,13 @@ document.addEventListener('DOMContentLoaded', function() {
             let renewCell2 = row.insertCell(8);
             let renewButtonYear = document.createElement('button');
             renewButtonYear.textContent = 'Renovar 1 Año';
-            renewButtonYear.className = 'renew-button';
+           // renewButtonYear.className = 'renew-button';
             renewButtonYear.onclick = function() { renovarSuscripcion(cliente.Email, 'anio'); };
             renewCell2.appendChild(renewButtonYear);
 
             let renewButtonMonth = document.createElement('button');
             renewButtonMonth.textContent = 'Renovar 1 Mes';
-            renewButtonMonth.className = 'renew-button';
+           // renewButtonMonth.className = 'renew-button';
             renewButtonMonth.onclick = function() { renovarSuscripcion(cliente.Email, 'mes'); };
             renewCell2.appendChild(renewButtonMonth);
 
@@ -95,7 +105,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         });
+        
     }
+
+    // Función para actualizar la paginación
+    function updatePagination(currentPage, totalPages) {
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        const prevButton = document.createElement('button');
+        prevButton.textContent = 'Anterior';
+        prevButton.disabled = currentPage === 1;
+        prevButton.onclick = () => {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchClientesActivos(currentPage, limit);
+            }
+        };
+        pagination.appendChild(prevButton);
+
+        const nextButton = document.createElement('button');
+        nextButton.textContent = 'Siguiente';
+        nextButton.onclick = () => {
+            currentPage++;
+            fetchClientesActivos(currentPage, limit);
+        };
+        pagination.appendChild(nextButton);
+    }
+    
+
 
     
     // Funciones para manejar las acciones específicas
@@ -117,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             alert(data.message);
-            fetchClientesActivos(); // Recargar la lista de clientes
+            fetchClientesActivos(currentPage, limit); // Recargar la lista de clientes
         })
         .catch(error => {
             console.error('Error al renovar suscripcion del cliente:', error);
@@ -148,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 alert(data.message);
-                fetchClientesActivos(); // Recargar la lista de clientes
+                fetchClientesActivos(currentPage, limit); // Recargar la lista de clientes
             })
             .catch(error => {
                 console.error('Error al eliminar el cliente:', error);

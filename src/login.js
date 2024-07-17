@@ -12,7 +12,8 @@ document.getElementById('login-form').addEventListener('submit', function(event)
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Failed to login');
+            return response.json().then(err => { throw new Error(err.message || 'Failed to login'); });
+            //throw new Error('Failed to login');
         }
         return response.json();
     })

@@ -1,12 +1,23 @@
 const express = require('express');
-const mysql = require('mysql');
+const mysql = require('mysql2');
+const path = require("path");
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 
+
+
 const app = express();
 const port = 3000;
+
+
+// Ajustar la ruta para que apunte a la carpeta raíz del proyecto
+const basePath = path.join(__dirname, '../');
+
+// Servir archivos estáticos desde la carpeta raíz
+app.use(express.static(basePath));
+
 
 app.use(express.json());
 app.use(cors({
@@ -17,6 +28,13 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+
+
+// Redirigir automáticamente a login.html cuando se accede a la raíz
+app.get('/', (req, res) => {
+    res.sendFile(path.join(basePath, 'login.html'));
+});
+
 const pool = mysql.createPool({
     connectionLimit: 10,
     host: process.env.DB_HOST,
@@ -24,6 +42,9 @@ const pool = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE
 });
+
+
+
 
 function verifyToken(req, res, next) {
     const bearerHeader = req.headers['authorization'];
@@ -44,6 +65,12 @@ function verifyToken(req, res, next) {
         res.status(401).json({ success: false, message: 'No se proporcionó token' });
     }
 }
+
+
+// Ruta protegida para servir index.html solo si el token es válido
+app.get('/index.html', verifyToken, (req, res) => {
+    res.sendFile(path.join(basePath, 'index.html'));
+});
 
 app.post('/api/usuarios/login', (req, res) => {
     const { username, password } = req.body;
@@ -79,7 +106,7 @@ app.get('/api/protected', verifyToken, (req, res) => {
     res.json({ message: 'Welcome to the protected route!', user: req.user });
 });
 
-app.get('/api/clientes/activos',verifyToken, (req, res) => {
+/*app.get('/api/clientes/activos',verifyToken, (req, res) => {
     const query = "SELECT * FROM clientes WHERE estadoSuscripcion = 'Activa'";
     pool.query(query, (error, results) => {
         if (error) {
@@ -87,7 +114,44 @@ app.get('/api/clientes/activos',verifyToken, (req, res) => {
         }
         res.json(results);
     });
+});*/
+
+app.get('/api/clientes/activos', verifyToken, (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const countQuery = 'SELECT COUNT(*) AS total FROM clientes WHERE estadoSuscripcion = "Activa"';
+    const dataQuery = 'SELECT * FROM clientes WHERE estadoSuscripcion = "Activa" LIMIT ?, ?';
+
+    pool.query(countQuery, (countError, countResults) => {
+        if (countError) {
+            console.error('Error al contar los clientes:', countError);
+            return res.status(500).json({ success: false, message: 'Error al contar los clientes' });
+        }
+
+        const totalItems = countResults[0].total;
+        const totalPages = Math.ceil(totalItems / limit);
+
+        pool.query(dataQuery, [offset, limit], (dataError, dataResults) => {
+            if (dataError) {
+                console.error('Error al obtener los clientes:', dataError);
+                return res.status(500).json({ success: false, message: 'Error al obtener los clientes' });
+            }
+
+            res.json({
+                data: dataResults,
+                currentPage: page,
+                totalPages: totalPages,
+                totalItems: totalItems
+            });
+        });
+    });
 });
+
+
+
+
 
 app.post('/api/clientes/agregar', verifyToken, (req, res) => {
     const { nombre, email, tipoSuscripcion, fechaInicio, fechaVencimiento } = req.body;

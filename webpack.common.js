@@ -26,4 +26,18 @@ module.exports = {
     ]
   },
   
+
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: './index.html', // Asegúrate de que este archivo esté en la raíz del proyecto
+      filename: 'index.html',
+      chunks: ['app'],
+    }),
+    new HtmlWebpackPlugin({
+      template: './login.html', // Asegúrate de que este archivo esté en la raíz del proyecto
+      filename: 'login.html',
+      chunks: ['login'],
+    }),
+  ],
+
 };
