@@ -106,15 +106,7 @@ app.get('/api/protected', verifyToken, (req, res) => {
     res.json({ message: 'Welcome to the protected route!', user: req.user });
 });
 
-/*app.get('/api/clientes/activos',verifyToken, (req, res) => {
-    const query = "SELECT * FROM clientes WHERE estadoSuscripcion = 'Activa'";
-    pool.query(query, (error, results) => {
-        if (error) {
-            return res.status(500).json({ success: false, message: 'Error al consultar la base de datos' });
-        }
-        res.json(results);
-    });
-});*/
+
 
 app.get('/api/clientes/activos', verifyToken, (req, res) => {
     const page = parseInt(req.query.page) || 1;
